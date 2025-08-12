@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert, Activity
 import * as Location from 'expo-location';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { cores } from '../../constantes/cores';
-import { PilhaClienteParamList } from '../../tipos';
+import { Endereco, PilhaClienteParamList } from '../../tipos';
 import { useCarrinho } from '../../contextos/ContextoCarrinho';
 import { usePedidos } from '../../contextos/ContextoPedidos';
+import { useUsuario } from '../../contextos/ContextoUsuario'; 
+import { Ionicons } from '@expo/vector-icons';
 
 
 interface EnderecoForm {
@@ -24,7 +26,7 @@ export default function TelaCheckout({ navigation }: Props) {
   const [carregandoCep, setCarregandoCep] = useState(false);
   const [estaCarregando, setEstaCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-
+  const { estado: estadoUsuario } = useUsuario(); 
   const { itens, limparCarrinho } = useCarrinho();
   const { adicionarPedido } = usePedidos();
 
@@ -91,6 +93,16 @@ export default function TelaCheckout({ navigation }: Props) {
     }
   };
 
+  const handleSelecionarEndereco = (endereco: Endereco) => {
+    setForm({
+      rua: endereco.rua,
+      numero: endereco.numero,
+      cidade: endereco.cidade,
+      cep: endereco.cep,
+      bairro: '', 
+    });
+  };
+
   const handleConfirmarPedido = () => {
     if (!form.rua || !form.cidade) {
       Alert.alert("Erro", "Por favor, preencha pelo menos a rua e a cidade.");
@@ -123,6 +135,21 @@ export default function TelaCheckout({ navigation }: Props) {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>Endereço de Entrega</Text>
+
+        {estadoUsuario.enderecos.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Meus Endereços</Text>
+            {estadoUsuario.enderecos.map(endereco => (
+              <TouchableOpacity key={endereco.id} style={styles.cardEndereco} onPress={() => handleSelecionarEndereco(endereco)}>
+                <Ionicons name="location-sharp" size={32} color={cores.cinzaMetalico} />
+                <View style={styles.cardDetails}>
+                  <Text style={styles.cardText}>{endereco.rua}, {endereco.numero}</Text>
+                  <Text style={styles.cardSubText}>{endereco.cidade} - {endereco.cep}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         <TouchableOpacity style={styles.locationButton} onPress={obterLocalizacao} disabled={carregandoLocalizacao}>
           {carregandoLocalizacao ? <ActivityIndicator color={cores.textoNoCard} /> : <Text style={styles.locationButtonText}>Preencher com minha localização</Text>}
@@ -172,7 +199,8 @@ const styles = StyleSheet.create({
   formContainer: { width: '100%', marginTop: 24 },
   input: { backgroundColor: '#2d343e', color: cores.brancoPuro, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, marginBottom: 12, fontSize: 16 },
   ctaButton: { backgroundColor: cores.vermelhoRacing, padding: 16, borderRadius: 8, width: '100%', marginTop: 16 },
-  ctaButtonText: { color: cores.brancoPuro, textAlign: 'center', fontSize: 18, fontWeight: 'bold' }, inputContainer: {
+  ctaButtonText: { color: cores.brancoPuro, textAlign: 'center', fontSize: 18, fontWeight: 'bold' }, 
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#2d343e',
@@ -181,11 +209,12 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginRight: 16,
-  },
-  separatorText: {
-    color: cores.cinzaMetalico,
-    textAlign: 'center',
-    fontSize: 14,
-    marginVertical: 20,
-  },
+  },  
+  section: { marginBottom: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: cores.brancoPuro, marginBottom: 12 },
+  cardEndereco: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#2d343e', padding: 20, borderRadius: 8, marginBottom: 12 },
+  cardDetails: { marginLeft: 16 },
+  cardText: { color: cores.brancoPuro, fontSize: 16, fontWeight: 'bold' },
+  cardSubText: { color: cores.cinzaMetalico, fontSize: 14 },
+  separatorText: { color: cores.cinzaMetalico, textAlign: 'center', fontSize: 14, marginVertical: 20, fontWeight: 'bold' },
 });

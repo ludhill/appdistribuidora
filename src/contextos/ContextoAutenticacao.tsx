@@ -96,7 +96,14 @@ export function FornecedorAutenticacao({ children }: PropsWithChildren<{}>) {
     return { sucesso: true, mensagem: "Cadastro realizado com sucesso!" };
   };
 
-  const logout = async () => { /* ... */ };
+  const logout = async () => {
+    try {
+      await AsyncStorage.removeItem('@WRDistribuidora:sessao');
+      setEstado({ usuario: null, perfil: null, estaCarregando: false });
+    } catch (e) {
+      console.error("Erro ao fazer logout:", e);
+    }
+  };
 
   const valor = { estado, login, logout, cadastrar };
 

@@ -58,7 +58,7 @@ function IconeCarrinhoHeader() {
   const totalItens = itens.reduce((soma, item) => soma + item.quantidade, 0);
 
   return ( 
-    <TouchableOpacity onPress={() => navigation.navigate('Carrinho')} style={styles.headerIconContainer}>
+    <TouchableOpacity onPress={() => navigation.navigate('Loja', { screen: 'Carrinho' })} style={styles.headerIconContainer}>
       <Ionicons name="cart-outline" size={28} color={cores.brancoPuro} />
       {totalItens > 0 && (
         <View style={styles.badgeContainer}>
@@ -131,6 +131,7 @@ const Drawer = createDrawerNavigator<NavegadorDrawerParamList>();
 
 export default function NavegadorApp() {
   const { estado } = useAutenticacao();
+  const perfil = estado.perfil; // Guardamos o perfil para facilitar a leitura
 
   if (estado.estaCarregando) {
     return <TelaCarregando />;
@@ -147,11 +148,27 @@ export default function NavegadorApp() {
         drawerInactiveTintColor: cores.brancoPuro,
         headerTitleAlign: 'center',
         headerTitle: () => (
-          <TouchableOpacity onPress={() => navigation.navigate('Loja', { screen: 'Catalogo' })}>
+          <TouchableOpacity 
+            onPress={() => {
+              if (perfil === 'cliente') {
+                navigation.navigate('Loja', { screen: 'Catalogo' });
+              } else {
+                // Para o admin, o "Home" leva ao painel principal
+                navigation.navigate('PainelAdmin', { screen: 'PainelPrincipal' });
+              }
+            }}
+          >
             <Ionicons name="home-outline" size={28} color={cores.brancoPuro} />
           </TouchableOpacity>
         ),
-        headerRight: () => <IconeCarrinhoHeader/>,
+
+        // CORREÇÃO: O ícone do carrinho só aparece se o utilizador for um cliente
+        headerRight: () => {
+          if (perfil === 'cliente') {
+            return <IconeCarrinhoHeader />;
+          }
+          return null; // Não mostra nada para o admin
+        },
       })}
     >
       {estado.perfil === 'cliente' ? (

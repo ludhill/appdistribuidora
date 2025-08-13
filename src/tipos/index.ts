@@ -1,5 +1,4 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
-import { ItemCarrinho } from '../contextos/ContextoCarrinho';
 
 // Tipos de Dados
 export interface Produto {
@@ -40,11 +39,13 @@ export interface ConfiguracoesNotificacao {
 
 export interface Pedido {
   id: string;
+  clienteId: string;  
+  clienteDados: Usuario;  
   data: Date;
   itens: any[];
   total: number;
-  enderecoEntrega: any; 
-  status: 'Aguardando Confirmação' | 'Processando' | 'Enviado' | 'Entregue';
+  enderecoEntrega: any;
+  status: 'Aguardando Pagamento' | 'Processando' | 'Enviado' | 'Entregue' | 'Falha na Entrega' | 'Devolvido' | 'Cancelado';
   codigoRastreio: string;
 }
 

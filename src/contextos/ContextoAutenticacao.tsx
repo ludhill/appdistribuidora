@@ -1,114 +1,112 @@
 import React, { createContext, useState, useContext, PropsWithChildren, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Usuario } from '../tipos';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { getFirestore, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { auth, db } from '../config/firebaseConfig';
+import { Usuario, Endereco, Cartao, ConfiguracoesNotificacao } from '../tipos';
 
 type PerfilUsuario = 'cliente' | 'admin';
 
-// Adicionamos a senha ao tipo de utilizador para a lista de cadastro
-interface UtilizadorRegistado {
-  email: string;
-  senha: string;
+interface DadosCompletosUsuario {
   perfil: PerfilUsuario;
   dados: Usuario;
+  enderecos: Endereco[];
+  cartoes: Cartao[];
+  configuracoes: ConfiguracoesNotificacao;
 }
 
 interface EstadoAutenticacao {
-  usuario: Usuario | null;
-  perfil: PerfilUsuario | null;
+  usuario: User | null;
+  dadosCompletos: DadosCompletosUsuario | null;
   estaCarregando: boolean;
 }
 
 interface ContextoAutenticacaoType {
   estado: EstadoAutenticacao;
-  login: (email: string, senha: string) => Promise<boolean>;
-  logout: () => void;
-  // NOVA FUNÇÃO: Cadastro
-  cadastrar: (dados: Omit<UtilizadorRegistado, 'perfil'>) => Promise<{ sucesso: boolean; mensagem: string }>;
+  login: (email: string, senha: string) => Promise<{ sucesso: boolean; mensagem?: string }>;
+  logout: () => Promise<void>;
+  cadastrar: (dados: any) => Promise<{ sucesso: boolean; mensagem: string }>;
+  atualizarPerfil: (novosDados: Usuario) => Promise<void>;
+  adicionarEndereco: (novoEndereco: Endereco) => Promise<void>;
 }
 
 const ContextoAutenticacao = createContext<ContextoAutenticacaoType | undefined>(undefined);
 
 export function FornecedorAutenticacao({ children }: PropsWithChildren<{}>) {
-  const [estado, setEstado] = useState<EstadoAutenticacao>({ usuario: null, perfil: null, estaCarregando: true });
-  // NOVO: A lista de utilizadores agora é um estado
-  const [utilizadores, setUtilizadores] = useState<UtilizadorRegistado[]>([]);
+  const [estado, setEstado] = useState<EstadoAutenticacao>({
+    usuario: null,
+    dadosCompletos: null,
+    estaCarregando: true,
+  });
 
-  // Efeito para carregar tanto a sessão como a lista de utilizadores
   useEffect(() => {
-    async function carregarDadosIniciais() {
-      try {
-        // Carregar lista de utilizadores
-        const utilizadoresSalvos = await AsyncStorage.getItem('@WRDistribuidora:utilizadores');
-        if (utilizadoresSalvos) {
-          setUtilizadores(JSON.parse(utilizadoresSalvos));
-        } else {
-          // Se não houver lista salva, cria a inicial com o admin
-          const listaInicial = [
-            { email: 'admin@email.com', senha: 'admin', perfil: 'admin' as PerfilUsuario, dados: { nome: 'Admin WR', email: 'admin@email.com', telefone: '11 12345-6789' } }
-          ];
-          setUtilizadores(listaInicial);
+    const unsubscribe = onAuthStateChanged(auth, async (utilizadorFirebase) => {
+      if (utilizadorFirebase) {
+        const docRef = doc(db, "usuarios", utilizadorFirebase.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setEstado({
+            usuario: utilizadorFirebase,
+            dadosCompletos: docSnap.data() as DadosCompletosUsuario,
+            estaCarregando: false,
+          });
         }
-
-        // Carregar sessão do utilizador logado
-        const sessaoSalva = await AsyncStorage.getItem('@WRDistribuidora:sessao');
-        if (sessaoSalva) {
-          const { usuario, perfil } = JSON.parse(sessaoSalva);
-          setEstado({ usuario, perfil, estaCarregando: false });
-        }
-      } catch (e) {
-        console.error("Falha ao carregar dados de autenticação.", e);
-      } finally {
-        setEstado(e => ({ ...e, estaCarregando: false }));
+      } else {
+        setEstado({ usuario: null, dadosCompletos: null, estaCarregando: false });
       }
-    }
-    carregarDadosIniciais();
+    });
+    return () => unsubscribe();
   }, []);
 
-  // Efeito para salvar a lista de utilizadores sempre que ela mudar
-  useEffect(() => {
-    if (!estado.estaCarregando) {
-        AsyncStorage.setItem('@WRDistribuidora:utilizadores', JSON.stringify(utilizadores));
-    }
-  }, [utilizadores, estado.estaCarregando]);
-
-  const login = async (email: string, senha: string): Promise<boolean> => {
-    const utilizadorEncontrado = utilizadores.find(u => u.email.toLowerCase() === email.toLowerCase() && u.senha === senha);
-    if (utilizadorEncontrado) {
-      const sessao = { usuario: utilizadorEncontrado.dados, perfil: utilizadorEncontrado.perfil };
-      await AsyncStorage.setItem('@WRDistribuidora:sessao', JSON.stringify(sessao));
-      setEstado({ ...sessao, estaCarregando: false });
-      return true;
-    }
-    return false;
-  };
-
-  const cadastrar = async (dados: Omit<UtilizadorRegistado, 'perfil'>): Promise<{ sucesso: boolean; mensagem: string }> => {
-    const emailJaExiste = utilizadores.some(u => u.email.toLowerCase() === dados.email.toLowerCase());
-    if (emailJaExiste) {
-      return { sucesso: false, mensagem: "Este e-mail já está em uso." };
-    }
-
-    const novoUtilizador: UtilizadorRegistado = {
-        ...dados,
-        perfil: 'cliente', // Novos cadastros são sempre clientes
-    };
-    setUtilizadores(estadoAtual => [...estadoAtual, novoUtilizador]);
-    return { sucesso: true, mensagem: "Cadastro realizado com sucesso!" };
-  };
-
-  const logout = async () => {
+  const login = async (email: string, senha: string) => {
     try {
-      await AsyncStorage.removeItem('@WRDistribuidora:sessao');
-      setEstado({ usuario: null, perfil: null, estaCarregando: false });
-    } catch (e) {
-      console.error("Erro ao fazer logout:", e);
+      await signInWithEmailAndPassword(auth, email, senha);
+      return { sucesso: true };
+    } catch (error: any) {
+      return { sucesso: false, mensagem: "Email ou senha incorretos." };
     }
   };
 
-  const valor = { estado, login, logout, cadastrar };
+  const cadastrar = async (dados: any) => {
+    try {
+      const credenciais = await createUserWithEmailAndPassword(auth, dados.email, dados.senha);
+      const dadosParaSalvar: DadosCompletosUsuario = {
+        perfil: 'cliente',
+        dados: { nome: dados.nome, email: dados.email, telefone: dados.telefone },
+        enderecos: [],
+        cartoes: [],
+        configuracoes: { email: true, whatsapp: false },
+      };
+      await setDoc(doc(db, "usuarios", credenciais.user.uid), dadosParaSalvar);
+      return { sucesso: true, mensagem: "Cadastro realizado com sucesso!" };
+    } catch (error: any) {
+      if (error.code === 'auth/email-already-in-use') {
+        return { sucesso: false, mensagem: "Este e-mail já está em uso." };
+      }
+      return { sucesso: false, mensagem: "Falha ao cadastrar." };
+    }
+  };
+  
+  const atualizarPerfil = async (novosDados: Usuario) => {
+    if (!estado.usuario) return;
+    const docRef = doc(db, "usuarios", estado.usuario.uid);
+    await updateDoc(docRef, { dados: novosDados });
+    setEstado(e => e.dadosCompletos ? ({ ...e, dadosCompletos: { ...e.dadosCompletos, dados: novosDados }}) : e);
+  };
 
+  const adicionarEndereco = async (novoEndereco: Endereco) => {
+    if (!estado.usuario || !estado.dadosCompletos) return;
+    const novosEnderecos = [...estado.dadosCompletos.enderecos, novoEndereco];
+    const docRef = doc(db, "usuarios", estado.usuario.uid);
+    await updateDoc(docRef, { enderecos: novosEnderecos });
+    setEstado(e => e.dadosCompletos ? ({ ...e, dadosCompletos: { ...e.dadosCompletos, enderecos: novosEnderecos }}) : e);
+  };
+
+  const logout = async () => { await signOut(auth); };
+
+  const valor = { estado, login, logout, cadastrar, atualizarPerfil, adicionarEndereco };
   return <ContextoAutenticacao.Provider value={valor}>{children}</ContextoAutenticacao.Provider>;
 }
+
 export function useAutenticacao() {
   const contexto = useContext(ContextoAutenticacao);
   if (contexto === undefined) {

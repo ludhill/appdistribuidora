@@ -37,18 +37,16 @@ function RaizNavegacao() {
     return <TelaCarregando />;
   }
 
-  return (
-    <NavigationContainer>
-      {!estado.usuario ? (
-        // Se NÃO houver utilizador, mostra a pilha de Login/Cadastro
-        <PilhaNavegacaoAutenticacao />
-      ) : (
-        // Se HOUVER utilizador, mostra o navegador principal
-        <NavegadorApp />
-      )}
-      <StatusBar style="light" />
-    </NavigationContainer>
-  );
+  return ( 
+      <NavigationContainer key={estado.usuario ? 'app' : 'auth'}>
+        {!estado.usuario ? (
+          <PilhaNavegacaoAutenticacao />
+        ) : (
+          <NavegadorApp />
+        )}
+        <StatusBar style="light" />
+      </NavigationContainer>
+  ); 
 }
 
 // Componente principal da aplicação

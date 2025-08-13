@@ -8,7 +8,8 @@ import { useCarrinho } from '../../contextos/ContextoCarrinho';
 import { usePedidos } from '../../contextos/ContextoPedidos';
 import { useUsuario } from '../../contextos/ContextoUsuario'; 
 import { Ionicons } from '@expo/vector-icons';
-
+import { useProdutos } from '../../contextos/ContextoProdutos';
+import { useAutenticacao } from '../../contextos/ContextoAutenticacao';
 
 interface EnderecoForm {
   rua: string;
@@ -22,6 +23,7 @@ type Props = NativeStackScreenProps<PilhaClienteParamList, 'Checkout'>;
 
 export default function TelaCheckout({ navigation }: Props) {
   const [form, setForm] = useState<EnderecoForm>({ rua: '', numero: '', bairro: '', cidade: '', cep: '' });
+  const [processandoPedido, setProcessandoPedido] = useState(false);
   const [carregandoLocalizacao, setCarregandoLocalizacao] = useState(false);
   const [carregandoCep, setCarregandoCep] = useState(false);
   const [estaCarregando, setEstaCarregando] = useState(false);
@@ -29,7 +31,8 @@ export default function TelaCheckout({ navigation }: Props) {
   const { estado: estadoUsuario } = useUsuario(); 
   const { itens, limparCarrinho } = useCarrinho();
   const { adicionarPedido } = usePedidos();
-
+  const { baixarEstoque } = useProdutos();
+  const { estado: estadoAuth } = useAutenticacao();
 
 
   const handleInputChange = (campo: keyof EnderecoForm, valor: string) => {
@@ -103,7 +106,7 @@ export default function TelaCheckout({ navigation }: Props) {
     });
   };
 
-  const handleConfirmarPedido = () => {
+  const handleConfirmarPedido = async () => {
     if (!form.rua || !form.cidade) {
       Alert.alert("Erro", "Por favor, preencha pelo menos a rua e a cidade.");
       return;
@@ -114,20 +117,31 @@ export default function TelaCheckout({ navigation }: Props) {
       return;
     }
 
-    const totalPedido = itens.reduce((soma, item) => soma + item.preco * item.quantidade, 0);
+    setProcessandoPedido(true); 
+    
+    try {
+      // A lógica agora é mais simples: apenas cria o pedido
+      const totalPedido = itens.reduce((soma, item) => soma + item.preco * item.quantidade, 0);
+      const novoPedidoData = {
+       itens: itens,
+        total: totalPedido,
+        enderecoEntrega: form,
+        clienteId: estadoAuth.usuario!.uid, 
+        clienteDados: estadoAuth.dadosUsuario!,
+      };
+      await adicionarPedido(novoPedidoData);
 
-    const novoPedido = {
-      id: Date.now().toString(),
-      data: new Date(),
-      itens: itens,
-      total: totalPedido,
-      enderecoEntrega: form,
-    };
+      limparCarrinho();
 
-    adicionarPedido(novoPedido);
-    limparCarrinho();
+      Alert.alert("Pedido Recebido!", "O seu pedido foi registado e aguarda a confirmação do pagamento.");
+      navigation.navigate('Catalogo');
 
-    Alert.alert("Pedido Confirmado!", "O seu pedido foi registado com sucesso.");
+    } catch (error) {
+      console.error("Erro ao finalizar pedido:", error);
+      Alert.alert("Erro", "Não foi possível processar o seu pedido. Tente novamente.");
+    } finally {
+      setProcessandoPedido(false);
+    }
     navigation.navigate('Catalogo');
   };
 
@@ -179,11 +193,14 @@ export default function TelaCheckout({ navigation }: Props) {
           <TextInput style={styles.input} placeholder="Número" value={form.numero} onChangeText={(text) => handleInputChange('numero', text)} keyboardType="number-pad" />
           <TextInput style={styles.input} placeholder="Bairro" value={form.bairro} onChangeText={(text) => handleInputChange('bairro', text)} />
           <TextInput style={styles.input} placeholder="Cidade" value={form.cidade} onChangeText={(text) => handleInputChange('cidade', text)} />
-        </View>
-
-        <TouchableOpacity style={styles.ctaButton} onPress={handleConfirmarPedido}>
-          <Text style={styles.ctaButtonText}>Confirmar Pedido</Text>
-        </TouchableOpacity>
+        </View> 
+        
+        <TouchableOpacity style={styles.ctaButton} onPress={handleConfirmarPedido} disabled={processandoPedido}>
+          {processandoPedido 
+            ? <ActivityIndicator color={cores.brancoPuro} />
+            : <Text style={styles.ctaButtonText}>Confirmar Pedido</Text>
+          }
+      </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

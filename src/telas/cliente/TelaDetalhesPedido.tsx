@@ -12,7 +12,7 @@ export default function TelaDetalhesPedido({ route, navigation }: Props) {
   const { pedido } = route.params;
   const { excluirPedido } = usePedidos();
 
-  const podeModificar = pedido.status === 'Aguardando Confirmação' || pedido.status === 'Processando';
+  const podeModificar = pedido.status === 'Aguardando Pagamento' || pedido.status === 'Processando';
   const podeRastrear = pedido.status === 'Enviado' || pedido.status === 'Entregue';
 
   const handleCancelarPedido = () => {

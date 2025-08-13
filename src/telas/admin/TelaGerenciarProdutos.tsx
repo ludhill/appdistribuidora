@@ -36,22 +36,28 @@ export default function TelaGerenciarProdutos({ navigation }: Props) {
     <SafeAreaView style={styles.safeArea}>
       <CabecalhoInterno titulo="Gerenciar Produtos" onVoltar={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.container}>
-        {produtos.map(produto => (
-          <View key={produto.id} style={styles.produtoCard}>
-            <View style={styles.produtoInfo}>
-              <Text style={styles.produtoNome}>{produto.nome}</Text>
-              <Text style={styles.produtoSub}>Preço: R$ {produto.preco.toFixed(2)} | Estoque: {produto.estoque}</Text>
+        {produtos.length === 0 ? (
+          <Text style={styles.emptyText}>Nenhum produto cadastrado. Clique no botão abaixo para adicionar o primeiro!</Text>
+        ) : (
+          produtos.map(produto => (
+            <View key={produto.id} style={styles.produtoCard}>
+              <View style={styles.produtoInfo}>
+                <Text style={styles.produtoNome}>{produto.nome || "Produto sem nome"}</Text>
+                <Text style={styles.produtoSub}>
+                  Preço: R$ {typeof produto.preco === 'number' ? produto.preco.toFixed(2) : 'N/A'} | Estoque: {produto.estoque ?? 'N/A'}
+                </Text>
+              </View>
+              <View style={styles.botoesContainer}>
+                <TouchableOpacity onPress={() => navigation.navigate('EditarProduto', { idProduto: produto.id })}>
+                  <Ionicons name="pencil-outline" size={24} color={cores.cinzaMetalico} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleExcluir(produto.id, produto.nome)}>
+                  <Ionicons name="trash-outline" size={24} color={cores.vermelhoRacing} />
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.botoesContainer}>
-              <TouchableOpacity onPress={() => navigation.navigate('EditarProduto', { idProduto: produto.id })}>
-                <Ionicons name="pencil-outline" size={24} color={cores.cinzaMetalico} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleExcluir(produto.id, produto.nome)}>
-                <Ionicons name="trash-outline" size={24} color={cores.vermelhoRacing} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
+          ))
+        )}
       </ScrollView>
       <TouchableOpacity style={styles.ctaButton} onPress={() => navigation.navigate('EditarProduto', {})}>
         <Text style={styles.ctaButtonText}>Adicionar Novo Produto</Text>
@@ -62,7 +68,18 @@ export default function TelaGerenciarProdutos({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: cores.grafiteIntenso },
-  container: { padding: 20, paddingBottom: 100 },
+  container: { 
+    padding: 20, 
+    paddingBottom: 100,
+    flexGrow: 1,
+  },
+  emptyText: {
+    fontSize: 18,
+    color: cores.cinzaMetalico,
+    textAlign: 'center',
+    marginTop: 50,
+    paddingHorizontal: 20,
+  },
   produtoCard: { flexDirection: 'row', backgroundColor: '#2d343e', padding: 16, borderRadius: 8, marginBottom: 12, alignItems: 'center' },
   produtoInfo: { flex: 1 },
   produtoNome: { color: cores.brancoPuro, fontSize: 18, fontWeight: 'bold' },

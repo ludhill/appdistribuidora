@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { cores } from '../constantes/cores';
 import { useAutenticacao } from '../contextos/ContextoAutenticacao';
@@ -10,6 +10,7 @@ type Props = NativeStackScreenProps<PilhaAutenticacaoParamList, 'Cadastro'>;
 
 export default function TelaCadastro({ navigation }: Props) {
   const [form, setForm] = useState({ nome: '', email: '', telefone: '', senha: '' });
+  const [estaCarregando, setEstaCarregando] = useState(false);
   const { cadastrar } = useAutenticacao();
 
   const handleCadastro = async () => {
@@ -17,11 +18,17 @@ export default function TelaCadastro({ navigation }: Props) {
       Alert.alert("Erro", "Preencha nome, email e senha.");
       return;
     }
+
+    setEstaCarregando(true);
+
     const { sucesso, mensagem } = await cadastrar({
         email: form.email,
         senha: form.senha,
-        dados: { nome: form.nome, email: form.email, telefone: form.telefone }
+        nome: form.nome,
+        telefone: form.telefone
     });
+
+    setEstaCarregando(false);
 
     Alert.alert(sucesso ? "Sucesso" : "Erro", mensagem);
     if (sucesso) {
@@ -37,8 +44,12 @@ export default function TelaCadastro({ navigation }: Props) {
         <TextInput style={styles.input} placeholder="E-mail" onChangeText={(t) => setForm({...form, email: t})} keyboardType="email-address" autoCapitalize="none" />
         <TextInput style={styles.input} placeholder="Telefone (Opcional)" onChangeText={(t) => setForm({...form, telefone: t})} keyboardType="phone-pad" />
         <TextInput style={styles.input} placeholder="Senha" onChangeText={(t) => setForm({...form, senha: t})} secureTextEntry />
-        <TouchableOpacity style={styles.ctaButton} onPress={handleCadastro}>
-          <Text style={styles.ctaButtonText}>Cadastrar</Text>
+       
+        <TouchableOpacity style={styles.ctaButton} onPress={handleCadastro} disabled={estaCarregando}>
+          {estaCarregando 
+            ? <ActivityIndicator color={cores.brancoPuro} /> 
+            : <Text style={styles.ctaButtonText}>Cadastrar</Text>
+          }
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

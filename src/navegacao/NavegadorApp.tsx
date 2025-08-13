@@ -1,21 +1,16 @@
-import React from 'react';
+import React from 'react'; 
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { createDrawerNavigator, DrawerNavigationProp } from '@react-navigation/drawer';
 import { createNativeStackNavigator, NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
 
-// Importações de Tipos (incluindo a nova PilhaAutenticacaoParamList)
-import { PilhaClienteParamList, PilhaPedidosParamList, PilhaPerfilParamList, NavegadorDrawerParamList, PilhaAdminParamList, PilhaAutenticacaoParamList } from '../tipos';
-type NavegacaoCarrinhoProp = CompositeNavigationProp<
-  DrawerNavigationProp<NavegadorDrawerParamList, 'Loja'>,
-  NativeStackNavigationProp<PilhaClienteParamList>
->;
+// Importações de Tipos
+import { PilhaClienteParamList, PilhaPedidosParamList, PilhaPerfilParamList, NavegadorDrawerParamList, PilhaAdminParamList } from '../tipos';
+
 // Importações de Contextos e Telas
 import { useAutenticacao } from '../contextos/ContextoAutenticacao';
 import { useCarrinho } from '../contextos/ContextoCarrinho';
-import TelaLogin from '../telas/TelaLogin';
-import TelaCadastro from '../telas/TelaCadastro';
-import TelaCarregando from '../telas/TelaCarregando';
 import TelaInicial from '../telas/cliente/TelaInicial';
 import TelaDetalhesProduto from '../telas/cliente/TelaDetalhesProduto';
 import TelaCarrinho from '../telas/cliente/TelaCarrinho';
@@ -37,27 +32,20 @@ import TelaGerenciarProdutos from '../telas/admin/TelaGerenciarProdutos';
 import TelaEditarProduto from '../telas/admin/TelaEditarProduto';
 import TelaDetalhesPedidoAdmin from '../telas/admin/TelaDetalhesPedidoAdmin';
 import { cores } from '../constantes/cores';
-import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
- 
-//  Pilha de Autenticação
-const AuthStack = createNativeStackNavigator<PilhaAutenticacaoParamList>();
-function PilhaNavegacaoAutenticacao() {
-  return (
-    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-      <AuthStack.Screen name="Login" component={TelaLogin} />
-      <AuthStack.Screen name="Cadastro" component={TelaCadastro} />
-    </AuthStack.Navigator>
-  );
-}
 
-// Componente do Ícone do Carrinho
+// --- PILHAS DE NAVEGAÇÃO   ---
+
+type NavegacaoCarrinhoProp = CompositeNavigationProp<
+  DrawerNavigationProp<NavegadorDrawerParamList, 'Loja'>,
+  NativeStackNavigationProp<PilhaClienteParamList>
+>;
+
 function IconeCarrinhoHeader() {
-  // O hook useNavigation com o nosso tipo customizado
   const navigation = useNavigation<NavegacaoCarrinhoProp>();
   const { itens } = useCarrinho();
   const totalItens = itens.reduce((soma, item) => soma + item.quantidade, 0);
 
-  return ( 
+  return (
     <TouchableOpacity onPress={() => navigation.navigate('Loja', { screen: 'Carrinho' })} style={styles.headerIconContainer}>
       <Ionicons name="cart-outline" size={28} color={cores.brancoPuro} />
       {totalItens > 0 && (
@@ -69,7 +57,6 @@ function IconeCarrinhoHeader() {
   );
 }
 
-// Pilha de Navegação do Cliente
 const ClientStack = createNativeStackNavigator<PilhaClienteParamList>();
 function PilhaNavegacaoCliente() {
   return (
@@ -82,7 +69,6 @@ function PilhaNavegacaoCliente() {
   );
 }
 
-// Pilha de Navegação dos Pedidos
 const PedidosStack = createNativeStackNavigator<PilhaPedidosParamList>();
 function PilhaNavegacaoPedidos() {
   return (
@@ -94,7 +80,6 @@ function PilhaNavegacaoPedidos() {
   );
 }
 
-// Pilha de Navegação do Perfil
 const PerfilStack = createNativeStackNavigator<PilhaPerfilParamList>();
 function PilhaNavegacaoPerfil() {
   return (
@@ -111,7 +96,6 @@ function PilhaNavegacaoPerfil() {
   );
 }
 
-// Pilha de Navegação do Admin
 const AdminStack = createNativeStackNavigator<PilhaAdminParamList>();
 function PilhaNavegacaoAdmin() {
   return (
@@ -125,21 +109,17 @@ function PilhaNavegacaoAdmin() {
   );
 }
 
-// --- NAVEGADOR PRINCIPAL  ---
+// --- NAVEGADOR PRINCIPAL ---
 
 const Drawer = createDrawerNavigator<NavegadorDrawerParamList>();
 
 export default function NavegadorApp() {
   const { estado } = useAutenticacao();
-  const perfil = estado.perfil; // Guardamos o perfil para facilitar a leitura
-
-  if (estado.estaCarregando) {
-    return <TelaCarregando />;
-  }
+  const perfil = estado.dadosCompletos?.perfil;  
 
   return (
-    <Drawer.Navigator
-      drawerContent={(props) => <ConteudoMenuLateral {...props} perfilUsuario={estado.perfil!} />}
+    <Drawer.Navigator 
+      drawerContent={(props) => <ConteudoMenuLateral {...props} perfilUsuario={perfil!} />}
       screenOptions={({ navigation }) => ({
         headerStyle: { backgroundColor: cores.grafiteIntenso },
         headerTintColor: cores.brancoPuro,
@@ -153,7 +133,6 @@ export default function NavegadorApp() {
               if (perfil === 'cliente') {
                 navigation.navigate('Loja', { screen: 'Catalogo' });
               } else {
-                // Para o admin, o "Home" leva ao painel principal
                 navigation.navigate('PainelAdmin', { screen: 'PainelPrincipal' });
               }
             }}
@@ -161,17 +140,15 @@ export default function NavegadorApp() {
             <Ionicons name="home-outline" size={28} color={cores.brancoPuro} />
           </TouchableOpacity>
         ),
-
-        // CORREÇÃO: O ícone do carrinho só aparece se o utilizador for um cliente
         headerRight: () => {
           if (perfil === 'cliente') {
             return <IconeCarrinhoHeader />;
           }
-          return null; // Não mostra nada para o admin
+          return null;
         },
       })}
-    >
-      {estado.perfil === 'cliente' ? (
+    > 
+      {perfil === 'cliente' ? (
         <>
           <Drawer.Screen name="Loja" component={PilhaNavegacaoCliente} />
           <Drawer.Screen name="Perfil" component={PilhaNavegacaoPerfil} />

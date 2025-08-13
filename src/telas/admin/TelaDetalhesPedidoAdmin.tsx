@@ -56,6 +56,16 @@ export default function TelaDetalhesPedidoAdmin({ route, navigation }: Props) {
             placeholder="Insira o código de rastreio"
             placeholderTextColor={cores.cinzaMetalico}
           />
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Dados do Cliente</Text>
+          <View style={styles.infoBox}>
+            <Text style={styles.infoText}>Nome: {pedido.clienteDados.nome}</Text>
+            <Text style={styles.infoText}>Email: {pedido.clienteDados.email}</Text>
+            <Text style={styles.infoText}>Telefone: {pedido.clienteDados.telefone || 'Não informado'}</Text>
+          </View>
+        </View>
+
           <TouchableOpacity style={styles.ctaButton} onPress={handleSalvarRastreio}>
             <Text style={styles.ctaButtonText}>Salvar Código</Text>
           </TouchableOpacity>
@@ -73,5 +83,7 @@ const styles = StyleSheet.create({
   sectionTitle: { color: cores.brancoPuro, fontSize: 20, fontWeight: 'bold', marginBottom: 12 },
   input: { backgroundColor: '#2d343e', color: cores.brancoPuro, padding: 16, borderRadius: 8, fontSize: 16 },
   ctaButton: { backgroundColor: cores.cinzaMetalico, padding: 16, borderRadius: 8, marginTop: 12 },
-  ctaButtonText: { color: cores.textoNoCard, textAlign: 'center', fontSize: 16, fontWeight: 'bold' },
+  ctaButtonText: { color: cores.textoNoCard, textAlign: 'center', fontSize: 16, fontWeight: 'bold' }, 
+  infoBox: {backgroundColor: '#2d343e', padding: 16, borderRadius: 8,}, 
+  infoText: {color: cores.brancoPuro, fontSize: 16, marginBottom: 8,},
 });

@@ -9,7 +9,15 @@ interface Props {
   onStatusChange: (novoStatus: Pedido['status']) => void;
 }
 
-const opcoesStatus: Pedido['status'][] = ['Aguardando Confirmação', 'Processando', 'Enviado', 'Entregue'];
+const opcoesStatus: Pedido['status'][] = [
+  'Aguardando Pagamento', // Adicionado
+  'Processando', 
+  'Enviado', 
+  'Entregue',
+  'Falha na Entrega',
+  'Devolvido',
+  'Cancelado' // Adicionado
+];
 
 export default function SeletorStatus({ statusAtual, onStatusChange }: Props) {
   const [modalVisivel, setModalVisivel] = useState(false);

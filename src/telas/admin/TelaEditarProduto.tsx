@@ -51,7 +51,9 @@ export default function TelaEditarProduto({ route, navigation }: Props) {
       <CabecalhoInterno titulo={isEditing ? "Editar Produto" : "Novo Produto"} onVoltar={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={styles.container}>
         <TextInput style={styles.input} placeholder="Nome do Produto" value={form.nome} onChangeText={(t) => handleInputChange('nome', t)} />
+        <Text style={styles.label}>Preço (ex: 149.99)</Text>
         <TextInput style={styles.input} placeholder="Preço (ex: 150.99)" value={String(form.preco)} onChangeText={(t) => handleInputChange('preco', Number(t))} keyboardType="numeric" />
+        <Text style={styles.label}>Qtd de Estoque</Text>
         <TextInput style={styles.input} placeholder="Estoque" value={String(form.estoque)} onChangeText={(t) => handleInputChange('estoque', Number(t))} keyboardType="number-pad" />
         <TextInput style={styles.input} placeholder="Categoria" value={form.categoria} onChangeText={(t) => handleInputChange('categoria', t)} />
         <TextInput style={styles.input} placeholder="URL da Imagem" value={form.imagemUrl} onChangeText={(t) => handleInputChange('imagemUrl', t)} />
@@ -70,5 +72,5 @@ const styles = StyleSheet.create({
   container: { padding: 20 },
   input: { backgroundColor: '#2d343e', color: cores.brancoPuro, padding: 16, borderRadius: 8, marginBottom: 16, fontSize: 16 },
   ctaButton: { backgroundColor: cores.vermelhoRacing, padding: 16, borderRadius: 8, marginTop: 16 },
-  ctaButtonText: { color: cores.brancoPuro, textAlign: 'center', fontSize: 18, fontWeight: 'bold' },
+  ctaButtonText: { color: cores.brancoPuro, textAlign: 'center', fontSize: 18, fontWeight: 'bold' }, label: {color: cores.cinzaMetalico,fontSize: 16,marginBottom: 8,},
 });

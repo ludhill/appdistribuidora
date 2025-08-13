@@ -1,13 +1,17 @@
 import React, { createContext, useState, useContext, PropsWithChildren, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
+import { db } from '../config/firebaseConfig';
 import { Produto } from '../tipos';
-import { PRODUTOS_EXEMPLO } from '../constantes/dadosExemplo';  
+import { ItemCarrinho } from './ContextoCarrinho';
+import { PRODUTOS_EXEMPLO } from '../constantes/dadosExemplo';
 
 interface ContextoProdutosType {
   produtos: Produto[];
-  adicionarProduto: (novoProduto: Omit<Produto, 'id'>) => void;
-  atualizarProduto: (produtoAtualizado: Produto) => void;
-  excluirProduto: (idProduto: string) => void;
+  adicionarProduto: (novoProduto: Omit<Produto, 'id'>) => Promise<void>;
+  atualizarProduto: (produtoAtualizado: Produto) => Promise<void>;
+  excluirProduto: (idProduto: string) => Promise<void>;
+  baixarEstoque: (itens: ItemCarrinho[]) => Promise<void>;
+  retornarEstoque: (itens: ItemCarrinho[]) => Promise<void>;
   estaCarregando: boolean;
 }
 
@@ -18,43 +22,71 @@ export function FornecedorProdutos({ children }: PropsWithChildren<{}>) {
   const [estaCarregando, setEstaCarregando] = useState(true);
 
   useEffect(() => {
-    async function carregarDados() {
-      try {
-        const dadosSalvos = await AsyncStorage.getItem('@WRDistribuidora:produtos');
-        
-        if (dadosSalvos) {
-          setProdutos(JSON.parse(dadosSalvos));
-        } else {
-          setProdutos(PRODUTOS_EXEMPLO);
-        }
-      } catch (e) { console.error("Falha ao carregar produtos.", e); }
-      finally { setEstaCarregando(false); }
+    const colecaoProdutosRef = collection(db, 'produtos');
+    const unsubscribe = onSnapshot(colecaoProdutosRef, (querySnapshot) => {
+      const produtosCarregados: Produto[] = [];
+      querySnapshot.forEach((doc) => {
+        produtosCarregados.push({ id: doc.id, ...doc.data() } as Produto);
+      });
+      setProdutos(produtosCarregados);
+      setEstaCarregando(false);
+    });
+    return () => unsubscribe();
+  }, []); 
+
+    const adicionarProduto = async (novoProduto: Omit<Produto, 'id'>) => {
+    try {
+      await addDoc(collection(db, 'produtos'), novoProduto);
+    } catch (e) {
+      console.error("Erro ao adicionar produto: ", e);
     }
-    carregarDados();
-  }, []);
+  };
 
-  useEffect(() => {
-    if (!estaCarregando) {
-      AsyncStorage.setItem('@WRDistribuidora:produtos', JSON.stringify(produtos));
+  const atualizarProduto = async (produtoAtualizado: Produto) => {
+    try {
+      const docRef = doc(db, 'produtos', produtoAtualizado.id);
+      const { id, ...dadosParaAtualizar } = produtoAtualizado;
+      await updateDoc(docRef, dadosParaAtualizar);
+    } catch (e) {
+      console.error("Erro ao atualizar produto: ", e);
     }
-  }, [produtos, estaCarregando]);
-
-  const adicionarProduto = (novoProduto: Omit<Produto, 'id'>) => {
-    const produtoCompleto: Produto = { ...novoProduto, id: Date.now().toString() };
-    setProdutos(estadoAtual => [...estadoAtual, produtoCompleto]);
   };
 
-  const atualizarProduto = (produtoAtualizado: Produto) => {
-    setProdutos(estadoAtual => 
-      estadoAtual.map(p => p.id === produtoAtualizado.id ? produtoAtualizado : p)
-    );
+  const excluirProduto = async (idProduto: string) => {
+    try {
+      await deleteDoc(doc(db, 'produtos', idProduto));
+    } catch (e) {
+      console.error("Erro ao excluir produto: ", e);
+    }
   };
 
-  const excluirProduto = (idProduto: string) => {
-    setProdutos(estadoAtual => estadoAtual.filter(p => p.id !== idProduto));
+  const baixarEstoque = async (itens: ItemCarrinho[]) => {
+    const batch = writeBatch(db);
+    itens.forEach(item => {
+      const produtoRef = doc(db, 'produtos', item.id);
+      const produtoAtual = produtos.find(p => p.id === item.id);
+      if (produtoAtual) {
+        const novoEstoque = produtoAtual.estoque - item.quantidade;
+        batch.update(produtoRef, { estoque: novoEstoque });
+      }
+    });
+    await batch.commit();
   };
 
-  const valor = { produtos, adicionarProduto, atualizarProduto, excluirProduto, estaCarregando };
+  const retornarEstoque = async (itens: ItemCarrinho[]) => {
+    const batch = writeBatch(db);
+    itens.forEach(item => {
+      const produtoRef = doc(db, 'produtos', item.id);
+      const produtoAtual = produtos.find(p => p.id === item.id);
+      if (produtoAtual) {
+        const novoEstoque = produtoAtual.estoque + item.quantidade;
+        batch.update(produtoRef, { estoque: novoEstoque });
+      }
+    });
+    await batch.commit();
+  };
+
+  const valor = { produtos, adicionarProduto, atualizarProduto, excluirProduto, baixarEstoque, retornarEstoque, estaCarregando };
 
   return <ContextoProdutos.Provider value={valor}>{children}</ContextoProdutos.Provider>;
 }

@@ -5,13 +5,15 @@ import { Pedido } from '../tipos';
  
 Notifications.setNotificationHandler({
   handleNotification: async (): Promise<Notifications.NotificationBehavior> => ({
-    shouldShowAlert: true,
     shouldPlaySound: false,
     shouldSetBadge: false,
+    shouldShowAlert: true,
+    shouldShowBanner: true, // novo campo requerido
+    shouldShowList: true,   // novo campo requerido
   }),
 });
 
-
+// Função para registar o dispositivo e pedir permissão
 export async function registarParaNotificacoesPushAsync() {
   let token;
   if (Device.isDevice) {
@@ -28,7 +30,7 @@ export async function registarParaNotificacoesPushAsync() {
     token = (await Notifications.getExpoPushTokenAsync()).data;
     console.log("Expo Push Token:", token);
   } else {
-    alert('É necessário usar um dispositivo físico para as Notificações Push.');
+    // alert('É necessário usar um dispositivo físico para as Notificações Push.');
   }
 
   if (Platform.OS === 'android') {
@@ -43,9 +45,13 @@ export async function registarParaNotificacoesPushAsync() {
   return token;
 }
 
-
+// Função para agendar e enviar uma notificação local
 export async function enviarNotificacaoPedidoEnviado(pedido: Pedido) {
-  const trigger: Notifications.NotificationTriggerInput = { seconds: 2 };
+  const trigger: Notifications.TimeIntervalTriggerInput = {
+  type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+  seconds: 2,
+  repeats: false,  
+};
 
   await Notifications.scheduleNotificationAsync({
     content: {

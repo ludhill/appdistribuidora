@@ -11,7 +11,7 @@ export default function TelaRastreamento({ route, navigation }: Props) {
   const { pedido } = route.params;
   const statusSteps = ['Processando', 'Enviado', 'Entregue'];
   
-  const currentStepIndex = pedido.status === 'Aguardando Confirmação' ? -1 : statusSteps.indexOf(pedido.status);
+  const currentStepIndex = pedido.status === 'Aguardando Pagamento' ? -1 : statusSteps.indexOf(pedido.status);
 
   return (
     <SafeAreaView style={styles.safeArea}>
